@@ -1,4 +1,4 @@
-// +build linux
+// +build linux freebsd
 
 package zfs
 
@@ -225,7 +225,23 @@ func (d *Driver) ZfsPath(id string) string {
 }
 
 func (d *Driver) MountPath(id string) string {
-	return path.Join(d.options.mountPath, "graph", id)
+	newid := id
+
+	// on FreeBSD mount path is limited with 88 chars, so we need to use short ids
+	if runtime.GOOS == "freebsd" {
+		maxlen := 12
+
+		// we need to preserve filesystem suffix
+		suffix := strings.SplitN(id, "-", 2)
+
+		if len(suffix) == 1 {
+			newid = id[0:maxlen]
+		} else {
+			newid = id[0:maxlen] + "-" + suffix[1]
+		}
+	}
+
+	return path.Join(d.options.mountPath, "graph", newid)
 }
 
 func (d *Driver) Create(id string, parent string) error {
